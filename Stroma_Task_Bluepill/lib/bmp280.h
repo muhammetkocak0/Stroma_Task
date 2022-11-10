@@ -14,6 +14,10 @@
  extern void bmp280_Init(void);
  extern int bmp280_get_temperature();
  extern int bmp280_get_pressure();
+
+
+
+
 #endif /* BMP280_H_ */
 
 
