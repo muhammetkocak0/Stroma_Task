@@ -8,7 +8,7 @@
 #define BMP280_H_
 
 
-//#define BMP280_dev_address 0xEE
+
 
  extern void calibrate(void);
  extern void bmp280_Init(void);
