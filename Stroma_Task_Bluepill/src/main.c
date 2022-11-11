@@ -38,7 +38,7 @@ int main(void)
 	  HAL_UART_Transmit(&huart2, &altitude[0], 30, HAL_MAX_DELAY);
 	  HAL_Delay(1800);
 
-	  if((temp < -10) || (altitude > 1800) || (pressure > 110000))
+	  if((temp_t < -10) || (altitude_t > 1800) || (pressure_t > 110000))
 	  {
 		  HAL_UART_Transmit(&huart2,"dangerous condition, turn to the safe zone !!! \n \r", 45, HAL_MAX_DELAY);
 		  HAL_GPIO_WritePin(GPIOB,GPIO_PIN_5,GPIO_PIN_SET);
