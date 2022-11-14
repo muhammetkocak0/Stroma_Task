@@ -8,16 +8,12 @@
 #define BMP280_H_
 
 
-
+//#define BMP280_dev_address 0xEE
 
  extern void calibrate(void);
  extern void bmp280_Init(void);
  extern int bmp280_get_temperature();
  extern int bmp280_get_pressure();
- extern int bmp280_get_altitude();
-
-
-
 #endif /* BMP280_H_ */
 
 

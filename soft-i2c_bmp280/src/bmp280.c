@@ -7,6 +7,8 @@
 #include <math.h>
 #include "stm32f1xx_hal.h"
 #include "bmp280.h"
+#include "i2c_sw.h"
+
 I2C_HandleTypeDef hi2c1;
 uint8_t BMP280_READ_ADDRESS = 0xEF;
 uint8_t BMP280_WRITE_ADDRESS = 0xEE;
@@ -21,19 +23,26 @@ unsigned short dig_T1, dig_P1;
 signed short dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
 volatile double var1, var2,t_fine;
 
+
+
+
+
 extern float temperature, pressure, altitude, init_height;
 uint8_t i2c_memory_read(uint8_t write_address, uint8_t memory_address)
 {
 	uint8_t rx_buffer;
+	
+	
+	
+	
+	
 	HAL_I2C_Master_Transmit(&hi2c1, write_address, &memory_address, 1, HAL_MAX_DELAY);
 	HAL_I2C_Master_Receive(&hi2c1, write_address + 1, &rx_buffer, 1, HAL_MAX_DELAY);
 	return rx_buffer;
 }
 void i2c_memory_write(uint8_t write_address, uint8_t memory_address, uint8_t data)
-{	uint8_t tx_buffer[2];
-	tx_buffer[0] = memory_address;
-	tx_buffer[1] = data;
-	HAL_I2C_Master_Transmit(&hi2c1, write_address, tx_buffer, 2, HAL_MAX_DELAY);
+{	
+	SW_I2C_WriteControl_8Bit(SW_I2C1,write_address,memory_address,data);
 }
 
 
@@ -47,8 +56,22 @@ void calibrate()
 {
 	uint8_t rx_buffer[24];
 	//while(((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00000001)==1)||((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00001000)==8));
-	HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_CALIBRATION_START_ADDRESS, 1, HAL_MAX_DELAY);
-	HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buffer[0], 24, HAL_MAX_DELAY);
+	
+	
+	//HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_CALIBRATION_START_ADDRESS, 1, HAL_MAX_DELAY);
+	//HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buffer[0], 24, HAL_MAX_DELAY);
+
+	SW_I2C_WriteControl_8Bit_OnlyRegAddr(SW_I2C1, BMP280_WRITE_ADDRESS, BMP280_CALIBRATION_START_ADDRESS);
+	
+	
+	
+	for(int i = 0; i<24; i++)
+	{
+	rx_buffer[i]=SW_I2C_ReadControl_8Bit_OnlyData(SW_I2C1,BMP280_READ_ADDRESS);
+	}
+
+	//SW_I2C_WriteControl_8Bit_OnlyRegAddr(SW_I2C1, BMP280_WRITE_ADDRESS, BMP280_CALIBRATION_START_ADDRESS);
+	//SW_I2C_ReadnControl_8Bit(SW_I2C1,BMP280_READ_ADDRESS,BMP280_CALIBRATION_START_ADDRESS,24,&rx_buffer[0]);
 	dig_T1=(rx_buffer[0])|(rx_buffer[1]<<8);
 	dig_T2=(rx_buffer[2])|(rx_buffer[3]<<8);
 	dig_T3=(rx_buffer[4])|(rx_buffer[5]<<8);
@@ -71,9 +94,17 @@ int bmp280_get_temperature()
 	HAL_Delay(100);
 	uint8_t rx_buffer[3];
 	//while(((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00000001)==1)||((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00001000)==8));
+	
+	//HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_TEMP_START_ADDRESS, 1, HAL_MAX_DELAY);
+	//HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buffer[0], 3, HAL_MAX_DELAY	);
+	
+	SW_I2C_WriteControl_8Bit_OnlyRegAddr(SW_I2C1, BMP280_WRITE_ADDRESS, BMP280_TEMP_START_ADDRESS);
+	//SW_I2C_ReadnControl_8Bit(SW_I2C1,BMP280_READ_ADDRESS,BMP280_TEMP_START_ADDRESS,3,&rx_buffer[0]);
+	for(int i = 0; i<3; i++)
+	{
+	rx_buffer[i]=SW_I2C_ReadControl_8Bit_OnlyData(SW_I2C1,BMP280_READ_ADDRESS);
+	}
 
-	HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_TEMP_START_ADDRESS, 1, HAL_MAX_DELAY);
-	HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buffer[0], 3, HAL_MAX_DELAY	);
 
 	temperature_raw=(rx_buffer[0]<<12)|(rx_buffer[1]<<4)|(rx_buffer[2]>>4);
 	var1=(((double)temperature_raw)/16384.0-((double)dig_T1)/1024.0)*((double)dig_T2);
@@ -88,11 +119,24 @@ int bmp280_get_pressure()
 {
 	HAL_Delay(80);
 	bmp280_get_temperature();
-	uint8_t rx_buff[3];
+	uint8_t rx_buffer[3];
 	//while(((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00000001)==1)||((i2c_memory_read(BMP280_WRITE_ADDRESS, BMP280_STATUS_ADDRESS)&0b00001000)==8));
-	HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_PRESSURE_START_ADDRESS, 1, HAL_MAX_DELAY);
-	HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buff[0], 3, HAL_MAX_DELAY	);
-	pressure_raw=(rx_buff[0]<<12)|(rx_buff[1]<<4)|(rx_buff[2]>>4);
+	//HAL_I2C_Master_Transmit(&hi2c1, BMP280_WRITE_ADDRESS, &BMP280_PRESSURE_START_ADDRESS, 1, HAL_MAX_DELAY);
+	//HAL_I2C_Master_Receive(&hi2c1, BMP280_READ_ADDRESS, &rx_buff[0], 3, HAL_MAX_DELAY	);
+	
+
+	//SW_I2C_WriteControl_8Bit_OnlyRegAddr(SW_I2C1, BMP280_WRITE_ADDRESS, BMP280_PRESSURE_START_ADDRESS);
+	//SW_I2C_ReadnControl_8Bit(SW_I2C1,BMP280_READ_ADDRESS,BMP280_PRESSURE_START_ADDRESS,3,&rx_buffer[0]);
+	
+	
+	SW_I2C_WriteControl_8Bit_OnlyRegAddr(SW_I2C1, BMP280_WRITE_ADDRESS, BMP280_PRESSURE_START_ADDRESS);
+	for(int i = 0; i<3; i++)
+	{
+	rx_buffer[i]=SW_I2C_ReadControl_8Bit_OnlyData(SW_I2C1,BMP280_READ_ADDRESS);
+	}
+	
+	
+	pressure_raw=(rx_buffer[0]<<12)|(rx_buffer[1]<<4)|(rx_buffer[2]>>4);
 	var1=(((double)temperature_raw)/16384.0-((double)dig_T1)/1024.0)*((double)dig_T2);
 	var2=((((double)temperature_raw)/131072.0-((double)dig_T1)/8192.0)*(((double)temperature_raw)/131072.0-((double)dig_T1)/8192.0))*((double)dig_T3);
 	t_fine = (int32_t)(var1+var2);
